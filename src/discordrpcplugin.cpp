@@ -16,57 +16,28 @@
 
 #include <discord_rpc.h>
 
-extern "C" {
-
-static void handleReady(const DiscordUser *)
-{
-}
-
-static void handleDisconnect(int, const char *)
-{
-}
-
-static void handleError(int errorCode, const char *message)
-{
-    qWarning() << "DISCORD RPC ERROR: CODE: " << errorCode << "MESSAGE: " << message;
-}
-
-static void handleJoin(const char *)
-{
-}
-
-static void handleSpectate(const char *)
-{
-}
-
-static void handleJoinRequest(const DiscordUser *)
-{
-}
-
-} // extern C
-
 K_PLUGIN_FACTORY_WITH_JSON(DiscordRpcPluginFactory, "discordrpcplugin.json", registerPlugin<DiscordRpcPlugin>();)
 
-DiscordRpcPlugin::DiscordRpcPlugin(QObject *parent, const QList<QVariant> &)
+DiscordRpcPlugin::DiscordRpcPlugin(QObject *parent)
     : KTextEditor::Plugin(parent)
+    , m_updateTimer(this)
 {
     initDiscord();
     readConfig();
 
-    m_updateTimer = new QTimer(this);
-    connect(m_updateTimer, &QTimer::timeout, this, &DiscordRpcPlugin::updateStatus);
-    m_updateTimer->start(5000);
+    connect(&m_updateTimer, &QTimer::timeout, this, &DiscordRpcPlugin::updateStatus);
+    m_updateTimer.start(5000);
 }
 
-DiscordRpcPlugin::RPCConfig DiscordRpcPlugin::DefaultConfig{
-    "Editing {FILENAME}",
-    "Project: {PROJECT}",
-    true,
+DiscordRpcPlugin::RPCConfig const DiscordRpcPlugin::DEFAULT_CONFIG{
+    .detailsText = "Editing {FILENAME}",
+    .stateText = "Project: {PROJECT}",
+    .showElapsedTime = true,
 };
 
 DiscordRpcPlugin::~DiscordRpcPlugin()
 {
-    m_updateTimer->stop();
+    m_updateTimer.stop();
     Discord_Shutdown();
 }
 
@@ -90,48 +61,49 @@ void DiscordRpcPlugin::readConfig()
 {
     KConfigGroup config(KSharedConfig::openConfig(), QStringLiteral("DiscordRPC"));
 
-    auto defaults = DiscordRpcPlugin::DefaultConfig;
+    auto defaults = DiscordRpcPlugin::DEFAULT_CONFIG;
 
-    m_config->detailsText = config.readEntry("DetailsText", defaults.detailsText);
-    m_config->stateText = config.readEntry("StateText", defaults.stateText);
-    m_config->showElapsedTime = config.readEntry("ShowElapsedTime", defaults.showElapsedTime);
+    m_config.detailsText = config.readEntry("DetailsText", defaults.detailsText);
+    m_config.stateText = config.readEntry("StateText", defaults.stateText);
+    m_config.showElapsedTime = config.readEntry("ShowElapsedTime", defaults.showElapsedTime);
 }
 
 void DiscordRpcPlugin::initDiscord()
 {
-    DiscordEventHandlers handlers;
-    memset(&handlers, 0, sizeof(handlers));
-    handlers.ready = handleReady;
-    handlers.disconnected = handleDisconnect;
-    handlers.errored = handleError;
-    handlers.joinGame = handleJoin;
-    handlers.spectateGame = handleSpectate;
-    handlers.joinRequest = handleJoinRequest;
+    DiscordEventHandlers handlers{
+        .ready =
+            [](const DiscordUser * /*request*/) {
+                qDebug() << "DISCORD RPC CONNECTED";
+            },
+        .disconnected = [](int /*errorCode*/, const char * /*message*/) {},
+        .errored =
+            [](int errorCode, const char *message) {
+                qWarning() << "DISCORD RPC ERROR: CODE: " << errorCode << "MESSAGE: " << message;
+            },
+        .joinGame = [](const char * /*joinSecret*/) {},
+        .spectateGame = [](const char * /*spectateSecret*/) {},
+        .joinRequest = [](const DiscordUser * /*request*/) {},
+    };
 
     Discord_Initialize(DISCORD_ID, &handlers, 1, nullptr);
 
     m_startTimestamp = QDateTime::currentSecsSinceEpoch();
 }
 
-void DiscordRpcPlugin::updateStatus()
+void DiscordRpcPlugin::updateStatus() const
 {
-    auto app = KTextEditor::Editor::instance()->application();
-    auto mainWindow = app->activeMainWindow();
-
-    DiscordRichPresence discordPresence;
-    memset(&discordPresence, 0, sizeof(discordPresence));
-
-    discordPresence.startTimestamp = m_config->showElapsedTime ? m_startTimestamp : 0;
+    auto *app = KTextEditor::Editor::instance()->application();
+    auto *mainWindow = app->activeMainWindow();
 
     QString fileName = "";
     KTextEditor::View *view = mainWindow->activeView();
-    if (view) {
+    if (view != nullptr) {
         fileName = view->document()->url().fileName();
     }
 
     QString projectName = "";
     QObject *projectPlugin = mainWindow->pluginView(QStringLiteral("kateprojectplugin"));
-    if (projectPlugin) {
+    if (projectPlugin != nullptr) {
         projectName = projectPlugin->property("projectName").toString();
     }
 
@@ -141,11 +113,27 @@ void DiscordRpcPlugin::updateStatus()
         return text.toUtf8();
     };
 
-    QByteArray details = formatText(m_config->detailsText);
-    QByteArray state = formatText(m_config->stateText);
-    discordPresence.details = details;
-    discordPresence.state = state;
-    discordPresence.largeImageKey = "kate";
+    QByteArray details = formatText(m_config.detailsText);
+    QByteArray state = formatText(m_config.stateText);
+
+    DiscordRichPresence discordPresence{
+        .state = state,
+        .details = details,
+        .startTimestamp = m_config.showElapsedTime ? m_startTimestamp : 0,
+        .endTimestamp = 0,
+        .largeImageKey = "kate",
+        .largeImageText = nullptr,
+        .smallImageKey = nullptr,
+        .smallImageText = nullptr,
+        .partyId = nullptr,
+        .partySize = 0,
+        .partyMax = 0,
+        .partyPrivacy = 0,
+        .matchSecret = nullptr,
+        .joinSecret = nullptr,
+        .spectateSecret = nullptr,
+        .instance = 0,
+    };
 
     Discord_UpdatePresence(&discordPresence);
 }

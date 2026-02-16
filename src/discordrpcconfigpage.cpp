@@ -13,16 +13,16 @@ DiscordRpcConfigPage::DiscordRpcConfigPage(QWidget *parent, DiscordRpcPlugin *pl
     : KTextEditor::ConfigPage(parent)
     , m_plugin(plugin)
 {
-    auto layout = new QVBoxLayout(this);
+    auto *layout = new QVBoxLayout(this);
 
-    auto formatLabel = new QLabel(this);
+    auto *formatLabel = new QLabel(this);
     formatLabel->setText(
         "Format:\n\
 {FILENAME} for current open file name\n\
 {PROJECT} for current open project name");
     layout->addWidget(formatLabel);
 
-    auto detailsLabel = new QLabel(this);
+    auto *detailsLabel = new QLabel(this);
     detailsLabel->setText("Details:");
     layout->addWidget(detailsLabel);
 
@@ -30,7 +30,7 @@ DiscordRpcConfigPage::DiscordRpcConfigPage(QWidget *parent, DiscordRpcPlugin *pl
     connect(m_detailsLineEdit, &QLineEdit::textEdited, this, &DiscordRpcConfigPage::changed);
     layout->addWidget(m_detailsLineEdit);
 
-    auto stateLabel = new QLabel(this);
+    auto *stateLabel = new QLabel(this);
     stateLabel->setText("State:");
     layout->addWidget(stateLabel);
     m_stateLineEdit = new QLineEdit(this);
@@ -65,7 +65,7 @@ void DiscordRpcConfigPage::apply()
 {
     KConfigGroup config(KSharedConfig::openConfig(), QStringLiteral("DiscordRPC"));
 
-    auto defauls = DiscordRpcPlugin::DefaultConfig;
+    auto defauls = DiscordRpcPlugin::DEFAULT_CONFIG;
 
     config.writeEntry("DetailsText", m_detailsLineEdit->text());
     config.writeEntry("StateText", m_stateLineEdit->text());
@@ -80,9 +80,9 @@ void DiscordRpcConfigPage::reset()
 {
     m_plugin->readConfig();
 
-    m_detailsLineEdit->setText(m_plugin->m_config->detailsText);
-    m_stateLineEdit->setText(m_plugin->m_config->stateText);
-    m_showTimeCheckBox->setChecked(m_plugin->m_config->showElapsedTime);
+    m_detailsLineEdit->setText(m_plugin->config().detailsText);
+    m_stateLineEdit->setText(m_plugin->config().stateText);
+    m_showTimeCheckBox->setChecked(m_plugin->config().showElapsedTime);
 }
 
 void DiscordRpcConfigPage::defaults()

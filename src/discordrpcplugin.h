@@ -2,19 +2,19 @@
 #define DISCORDRPCPLUGIN_H
 
 #include <KTextEditor/Plugin>
-#include <ktexteditor/mainwindow.h>
+#include <QTimer>
 
 class DiscordRpcPlugin : public KTextEditor::Plugin
 {
     Q_OBJECT
 
 public:
-    explicit DiscordRpcPlugin(QObject *parent = nullptr, const QList<QVariant> & = QList<QVariant>());
+    explicit DiscordRpcPlugin(QObject *parent = nullptr);
     ~DiscordRpcPlugin() override;
 
     QObject *createView(KTextEditor::MainWindow *mainWindow) override;
 
-    int configPages() const override
+    [[nodiscard]] int configPages() const override
     {
         return 1;
     }
@@ -26,18 +26,23 @@ public:
         bool showElapsedTime;
     };
 
-    static RPCConfig DefaultConfig;
-
-    RPCConfig *m_config = new RPCConfig();
     void readConfig();
 
-    void updateStatus();
+    void updateStatus() const;
+
+    [[nodiscard]] RPCConfig &config()
+    {
+        return m_config;
+    }
+    static const RPCConfig DEFAULT_CONFIG;
 
 private:
-    int64_t m_startTimestamp;
-
-    QTimer *m_updateTimer;
     void initDiscord();
+
+    int64_t m_startTimestamp;
+    QTimer m_updateTimer;
+
+    RPCConfig m_config{};
 };
 
 #endif

@@ -10,9 +10,9 @@ class DiscordRpcConfigPage final : public KTextEditor::ConfigPage
 public:
     explicit DiscordRpcConfigPage(QWidget *parent, DiscordRpcPlugin *plugin);
 
-    QString name() const override;
-    QString fullName() const override;
-    QIcon icon() const override;
+    [[nodiscard]] QString name() const override;
+    [[nodiscard]] QString fullName() const override;
+    [[nodiscard]] QIcon icon() const override;
 
     void apply() override;
     void reset() override;
