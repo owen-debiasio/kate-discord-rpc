@@ -13,8 +13,8 @@ Dependencies: a c++ compiler, cmake, Qt and KDE frameworks headers
 run:
 
 ```sh
-git clone https://github.com/owen-debiasio/kate-discord-rpc
-cd ~/kate-discord-rpc
+git clone https://github.com/leia-uwu/kate-discord-rpc
+cd kate-discord-rpc
 git submodule update --init --recursive
 cmake -B build -S .
 cmake --build build
