@@ -13,9 +13,12 @@ Dependencies: a c++ compiler, cmake, Qt and KDE frameworks headers
 run:
 
 ```sh
-cmake -B build
+git clone --recursive https://github.com/leia-uwu/kate-discord-rpc
+cd kate-discord-rpc
+cmake -B build -S .
 cmake --build build
 sudo cmake --install build
+
 ```
 this should install a single file to the KF6 KTextEditor plugin path
 
